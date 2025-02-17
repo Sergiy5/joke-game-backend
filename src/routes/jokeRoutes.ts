@@ -1,14 +1,61 @@
 import express from "express";
-import Joke, { IJoke } from "../models/joke";
+import Joke from "../models/joke";
 
 const router = express.Router();
+
+const countVotes = [
+  { value: 0, label: "😂" },
+
+  { value: 0, label: "👍" },
+
+  { value: 0, label: "❤️" },
+];
+
+/**
+ * Fetch a joke from TeeHee API and store it in MongoDB
+ * @route POST /api/fetch-joke
+ */
+router.get("/fetch-joke", async (req: any, res: any) => {
+  try {
+    // Fetch joke from TeeHee API
+     const response = await fetch("https://teehee.dev/api/joke");
+     const data = await response.json();
+    // const { data } = await axios.get("https://teehee.dev/api/joke");
+
+    // Check if joke already exists in DB
+    const existingJoke = await Joke.findOne({ id: data.id });
+    if (existingJoke) {
+      return res.json(existingJoke);
+    }
+
+    // Save joke to MongoDB
+    const newJoke = new Joke({
+      id: data.id,
+      question: data.question,
+      answer: data.answer,
+      permalink: data.permalink,
+      votes: countVotes, 
+      availableVotes: ["😂", "👍", "❤️"], // Default emoji reactions
+    });
+
+    await newJoke.save();
+
+    res.status(201).json(newJoke);
+  } catch (error) {
+    console.error("Error fetching joke:", error);
+    res.status(500).json({ message: "Failed to fetch joke" });
+  }
+});
 
 // Fetch a random joke
 router.get("/joke", async (req, res) => {
   try {
     const jokes = await Joke.find();
+
     const randomJoke = jokes[Math.floor(Math.random() * jokes.length)];
+
     res.json(randomJoke);
+
   } catch (error) {
     res.status(500).json({ message: error });
   }
@@ -18,7 +65,9 @@ router.get("/joke", async (req, res) => {
 router.post("/joke/:id", async (req: any, res: any) => {
   try {
     const { label } = req.body;
-    const joke = await Joke.findById(req.params.id);
+    const jokeId = req.params.id;
+    // console.log("label_>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>", label);
+    const joke = await Joke.findOne({ id: jokeId });
 
     if (!joke) return res.status(404).json({ message: "Joke not found" });
 
@@ -36,20 +85,33 @@ router.post("/joke/:id", async (req: any, res: any) => {
   }
 });
 
+
+/**
+ * Update a joke by ID
+ * @route PUT /api/joke/:id
+ */
+router.put("/joke/:id", async (req: any, res: any) => {
+  const { id } = req.params;
+  const { question, answer } = req.body;
+
+  try {
+    const updatedJoke = await Joke.findOneAndUpdate(
+      {id: id},
+      { question, answer },
+      { new: true } // Return the updated document
+    );
+
+    if (!updatedJoke) {
+      return res.status(404).json({ message: "Joke not found" });
+    }
+
+    res.json(updatedJoke);
+  } catch (error) {
+    console.error("Error updating joke:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
 export default router;
-
-
-
-// router.get("/joke/count", async (req, res) => {
-//   try {
-//     const totalCount = await Joke.aggregate([
-//       { $group: { _id: null, total: { $sum: "$fetchCount" } } },
-//     ]);
-
-//     res.json({ totalJokesFetched: totalCount[0]?.total || 0 });
-//   } catch (error) {
-//     console.error("Error getting joke count:", error);
-//     res.status(500).json({ message: "Server error" });
-//   }
-// });
 
