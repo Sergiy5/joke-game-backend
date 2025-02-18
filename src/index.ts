@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 5000;
 const corsOptions = {
   origin: [
     "http://localhost:3000", // Local development server
-    "https://joke-random.vercel.app/", // Vercel production URL
+    "https://joke-random.vercel.app", // Vercel production URL
   ],
   methods: "GET,POST,PUT,DELETE",
   allowedHeaders: "Content-Type, Authorization",
