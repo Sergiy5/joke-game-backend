@@ -20,7 +20,6 @@ router.get("/fetch-joke", async (req: any, res: any) => {
     // Fetch joke from TeeHee API
      const response = await fetch("https://teehee.dev/api/joke");
      const data = await response.json();
-    // const { data } = await axios.get("https://teehee.dev/api/joke");
 
     // Check if joke already exists in DB
     const existingJoke = await Joke.findOne({ id: data.id });
